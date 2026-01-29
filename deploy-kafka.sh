@@ -8,11 +8,7 @@ RELEASE_NAME="${ENV_PREFIX}-kfk"
 CHART_PATH="." # Path to your local folder
 
 # Updated HA Strategy for this specific chart
-CONTROLLER_COUNT=1  # MUST BE 1 (Chart limitation)
-BROKER_COUNT=3      # High Availability for data
 STORAGE_CLASS="longhorn"
-IMAGE_REPO="apache/kafka"
-IMAGE_TAG="3.8.0"
 
 # === 1. Safety Check ===
 if [ ! -f "$CHART_PATH/Chart.yaml" ]; then
@@ -32,17 +28,12 @@ kubectl get ns "$NAMESPACE" >/dev/null 2>&1 || kubectl create ns "$NAMESPACE"
 # === 3. Helm Upgrade / Install ===
 helm upgrade --install "$RELEASE_NAME" "$CHART_PATH" \
   --namespace "$NAMESPACE" \
-  --set kafka.image.repository="$IMAGE_REPO" \
-  --set kafka.image.tag="$IMAGE_TAG" \
-  --set kafka.controller.replicaCount=$CONTROLLER_COUNT \
   --set kafka.controller.persistence.storageClass="$STORAGE_CLASS" \
   --set kafka.controller.persistence.size="5Gi" \
-  --set kafka.broker.replicaCount=$BROKER_COUNT \
   --set kafka.broker.persistence.storageClass="$STORAGE_CLASS" \
   --set kafka.broker.persistence.size="50Gi" \
   --set kafka.broker.resources.requests.memory="1Gi" \
-  --set kafka.broker.resources.limits.memory="2Gi" \
-  --set exporters.kafka.enabled=true
+  --set kafka.broker.resources.limits.memory="2Gi"
 
 # === 4. Sequential Readiness Check ===
 echo "⏳ Checking Controller status..."
