@@ -1,0 +1,112 @@
+{{- if .Values.kafka.enabled }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "kafka.fullname" . }}-kafka-controller-config
+  labels:
+    app.kubernetes.io/name: {{ include "kafka.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: kafka-controller-config
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/part-of: {{ .Chart.Name }}
+    helm.sh/chart: {{ include "kafka.chart" . }}
+data:
+  # JAAS config will be generated at runtime from mounted secrets
+  kafka_server_jaas.conf.template: |
+    KafkaServer {
+        org.apache.kafka.common.security.plain.PlainLoginModule required
+        username="PLACEHOLDER_USERNAME"
+        password="PLACEHOLDER_PASSWORD"
+        user_PLACEHOLDER_USERNAME="PLACEHOLDER_PASSWORD";
+    };
+  server.properties: |
+    # Kafka controller configuration
+    process.roles=controller
+    node.id=PLACEHOLDER_NODE_ID
+    controller.quorum.voters={{ include "kafka.kafka.controllerQuorumVoters" . }}
+    listeners=CONTROLLER://:9093
+    listener.security.protocol.map=CONTROLLER:PLAINTEXT
+    controller.listener.names=CONTROLLER
+    log.dirs={{ .Values.kafka.controller.logDir }}
+  client.properties: |
+    # Kafka client configuration for SASL authentication
+    security.protocol=SASL_PLAINTEXT
+    sasl.mechanism=PLAIN
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "kafka.fullname" . }}-kafka-broker-config
+  labels:
+    app.kubernetes.io/name: {{ include "kafka.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: kafka-broker-config
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/part-of: {{ .Chart.Name }}
+    helm.sh/chart: {{ include "kafka.chart" . }}
+data:
+  # JAAS config will be generated at runtime from mounted secrets
+  kafka_server_jaas.conf.template: |
+    KafkaServer {
+        org.apache.kafka.common.security.plain.PlainLoginModule required
+        username="PLACEHOLDER_USERNAME"
+        password="PLACEHOLDER_PASSWORD"
+        user_PLACEHOLDER_USERNAME="PLACEHOLDER_PASSWORD";
+    };
+  server.properties: |
+    # Kafka broker configuration
+    process.roles=broker
+    node.id=PLACEHOLDER_NODE_ID
+    controller.quorum.voters={{ include "kafka.kafka.controllerQuorumVoters" . }}
+    listeners=SASL_PLAINTEXT://:9092
+    listener.security.protocol.map=SASL_PLAINTEXT:SASL_PLAINTEXT,CONTROLLER:PLAINTEXT
+    controller.listener.names=CONTROLLER
+    advertised.listeners=SASL_PLAINTEXT://PLACEHOLDER_POD_NAME.{{ include "kafka.fullname" . }}-kafka-broker.{{ default "default" .Release.Namespace }}.svc.cluster.local:9092
+    inter.broker.listener.name=SASL_PLAINTEXT
+    num.partitions=3
+    default.replication.factor=1
+    offsets.topic.replication.factor=1
+    transaction.state.log.min.isr=1
+    transaction.state.log.replication.factor=1
+    auto.create.topics.enable={{ .Values.kafka.autoCreateTopicsEnable }}
+    delete.topic.enable={{ .Values.kafka.deleteTopicEnable }}
+    log.dirs={{ .Values.kafka.broker.logDir }}
+    # SASL Authentication configuration
+    sasl.enabled.mechanisms=PLAIN
+    sasl.mechanism.inter.broker.protocol=PLAIN
+    # JAAS configuration file path
+    sasl.jaas.config=/opt/kafka/config/kraft/kafka_server_jaas.conf
+  # Separate config for init container storage formatting
+  server-init.properties: |
+    process.roles=broker
+    node.id=PLACEHOLDER_NODE_ID
+    controller.quorum.voters={{ include "kafka.kafka.controllerQuorumVoters" . }}
+    listeners=SASL_PLAINTEXT://:9092
+    listener.security.protocol.map=SASL_PLAINTEXT:SASL_PLAINTEXT,CONTROLLER:PLAINTEXT
+    controller.listener.names=CONTROLLER
+    inter.broker.listener.name=SASL_PLAINTEXT
+    num.partitions=3
+    default.replication.factor=1
+    offsets.topic.replication.factor=1
+    transaction.state.log.min.isr=1
+    transaction.state.log.replication.factor=1
+    auto.create.topics.enable={{ .Values.kafka.autoCreateTopicsEnable }}
+    delete.topic.enable={{ .Values.kafka.deleteTopicEnable }}
+    log.dirs={{ .Values.kafka.broker.logDir }}
+    # SASL Authentication configuration
+    sasl.enabled.mechanisms=PLAIN
+    sasl.mechanism.inter.broker.protocol=PLAIN
+    # JAAS configuration file path
+    sasl.jaas.config=/opt/kafka/config/kraft/kafka_server_jaas.conf
+  client.properties: |
+    # Kafka client configuration for SASL authentication
+    security.protocol=SASL_PLAINTEXT
+    sasl.mechanism=PLAIN
+  client_jaas.conf.template: |
+    KafkaClient {
+        org.apache.kafka.common.security.plain.PlainLoginModule required
+        username="PLACEHOLDER_USERNAME"
+        password="PLACEHOLDER_PASSWORD";
+    };
+{{- end }}

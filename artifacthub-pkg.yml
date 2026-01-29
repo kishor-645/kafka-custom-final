@@ -1,0 +1,20 @@
+version: 0.1.20
+name: kafka
+displayName: Kafka
+createdAt: "2025-11-01T00:00:00Z"
+description: Apache Kafka deployment
+homeURL: "https://cagriekin.github.io/charts"
+logoPath: ""
+appVersion: "4.1.0"
+operator: false
+deprecated: false
+maintainers:
+  - name: Cagri Ekin
+    email: cagriekin@gmail.com
+    url: https://cagriekin.github.io/charts
+links:
+  - name: Source
+    url: https://github.com/cagriekin/charts
+screenshots: []
+changes: []
+

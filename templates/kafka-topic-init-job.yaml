@@ -1,0 +1,191 @@
+{{- if .Values.kafka.enabled }}
+{{- $jobName := printf "%s-kafka-topic-init-%s" (include "kafka.fullname" .) (include "kafka.topicInit.hash" .) | trunc 63 | trimSuffix "-" }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ $jobName }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded,BeforeHookCreation
+    argocd.argoproj.io/sync-options: Replace=true
+  labels:
+    app.kubernetes.io/name: {{ include "kafka.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: kafka-topic-init
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/part-of: {{ .Chart.Name }}
+    helm.sh/chart: {{ include "kafka.chart" . }}
+    job-name: {{ $jobName }}
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "kafka.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: kafka-topic-init
+        app.kubernetes.io/managed-by: {{ .Release.Service }}
+        app.kubernetes.io/part-of: {{ .Chart.Name }}
+        helm.sh/chart: {{ include "kafka.chart" . }}
+        job-name: {{ $jobName }}
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: kafka-topic-init
+        image: {{ .Values.kafka.image.registry }}/{{ .Values.kafka.image.repository }}:{{ .Values.kafka.image.tag }}
+        volumeMounts:
+        - name: kafka-config
+          mountPath: /opt/kafka/config/kraft
+        - name: kafka-secret
+          mountPath: /opt/kafka/secrets
+          readOnly: true
+        - name: kafka-config-runtime
+          mountPath: /tmp/kafka-config
+        {{- $root := . }}
+        command:
+        - /bin/bash
+        - -c
+        - |
+          set -e
+          
+          # Read username and password from mounted secret
+          SECRET_USERNAME_KEY="{{ include "kafka.auth.usernameKey" . | trim }}"
+          SECRET_PASSWORD_KEY="{{ include "kafka.auth.passwordKey" . | trim }}"
+          KAFKA_USERNAME=$$(cat /opt/kafka/secrets/$${SECRET_USERNAME_KEY})
+          KAFKA_PASSWORD=$$(cat /opt/kafka/secrets/$${SECRET_PASSWORD_KEY})
+          
+          # Create writable config directory and copy config files
+          mkdir -p /tmp/kafka-config
+          cp /opt/kafka/config/kraft/client.properties /tmp/kafka-config/
+          cp /opt/kafka/config/kraft/client_jaas.conf.template /tmp/kafka-config/
+
+          # Generate JAAS config from template using actual credentials
+          sed -e "s|PLACEHOLDER_USERNAME|$${KAFKA_USERNAME}|g" -e "s|PLACEHOLDER_PASSWORD|$${KAFKA_PASSWORD}|g" /opt/kafka/config/kraft/client_jaas.conf.template > /tmp/kafka-config/client_jaas.conf
+
+          # Set JAAS configuration for Kafka client authentication
+          export KAFKA_OPTS="-Djava.security.auth.login.config=/tmp/kafka-config/client_jaas.conf"
+
+          {{- if .Values.kafka.bootstrapServer }}
+          BOOTSTRAP_SERVER="{{ .Values.kafka.bootstrapServer }}"
+          {{- else }}
+          BOOTSTRAP_SERVER="{{ include "kafka.fullname" . }}-kafka-broker-0.{{ include "kafka.fullname" . }}-kafka-broker.{{ default "default" .Release.Namespace }}.svc.cluster.local:9092"
+          {{- end }}
+          MAX_ATTEMPTS=${KAFKA_BOOTSTRAP_RETRIES:-30}
+          SLEEP_SECONDS=${KAFKA_BOOTSTRAP_SLEEP:-5}
+
+          echo "Waiting for Kafka bootstrap server ${BOOTSTRAP_SERVER} to become reachable..."
+          ATTEMPT=1
+          until echo "Attempt ${ATTEMPT}/${MAX_ATTEMPTS}: Testing connection to ${BOOTSTRAP_SERVER}" && /opt/kafka/bin/kafka-broker-api-versions.sh \
+            --bootstrap-server "${BOOTSTRAP_SERVER}" \
+            --command-config /tmp/kafka-config/client.properties; do
+            if [ "${ATTEMPT}" -ge "${MAX_ATTEMPTS}" ]; then
+              echo "Kafka bootstrap server still unreachable after ${ATTEMPT} attempts; giving up." >&2
+              exit 1
+            fi
+
+            echo "Attempt ${ATTEMPT}/${MAX_ATTEMPTS} failed. Broker not ready yet; sleeping ${SLEEP_SECONDS}s..."
+            ATTEMPT=$((ATTEMPT + 1))
+            sleep "${SLEEP_SECONDS}"
+          done
+
+          echo "Kafka bootstrap server reachable."
+
+          # Kafka broker should be ready. Creating topics...
+          echo "Creating topics..."
+          export KAFKA_OPTS="-Djava.security.auth.login.config=/tmp/kafka-config/client_jaas.conf"
+
+          # Ensure configured topics exist with correct configuration
+{{- range $topicName, $topic := $root.Values.kafka.topics }}
+          echo "Ensuring {{ $topicName }} topic exists with correct configuration..."
+          DESIRED_PARTITIONS={{ default 1 $topic.partitions }}
+          DESIRED_REPLICATION={{ default 1 $topic.replicationFactor }}
+
+          # Try to create topic first (will succeed for new topics, fail silently for existing ones)
+          /opt/kafka/bin/kafka-topics.sh \
+            --create \
+            --bootstrap-server ${BOOTSTRAP_SERVER} \
+            --command-config /tmp/kafka-config/client.properties \
+            --topic {{ $topicName }} \
+            --partitions ${DESIRED_PARTITIONS} \
+            --replication-factor ${DESIRED_REPLICATION} \
+            {{- with $topic.config }}
+            {{- range $confKey, $confValue := . }}
+            --config {{ $confKey }}={{ $confValue }} \
+            {{- end }}
+            {{- end }}
+            --if-not-exists
+
+          # Check current topic configuration
+          TOPIC_DESC=$(timeout 30 /opt/kafka/bin/kafka-topics.sh \
+            --describe \
+            --bootstrap-server ${BOOTSTRAP_SERVER} \
+            --command-config /tmp/kafka-config/client.properties \
+            --topic {{ $topicName }} 2>/dev/null || echo "")
+
+          if [ -n "$TOPIC_DESC" ]; then
+            # Debug: show what we got from describe
+            echo "Debug: TOPIC_DESC='$TOPIC_DESC'"
+
+            # Extract current partitions count from the topic description
+            # Parse the describe output which has format like: Topic: name PartitionCount: N ReplicationFactor: M
+            CURRENT_PARTITIONS=$(echo "$TOPIC_DESC" | awk -F'\t' '{for(i=1;i<=NF;i++) if($i ~ /PartitionCount/) {split($i,a,":"); print a[2]}}' | tr -d ' ')
+            CURRENT_REPLICATION=$(echo "$TOPIC_DESC" | awk -F'\t' '{for(i=1;i<=NF;i++) if($i ~ /ReplicationFactor/) {split($i,a,":"); print a[2]}}' | tr -d ' ')
+
+            # Set defaults if parsing failed
+            CURRENT_PARTITIONS=${CURRENT_PARTITIONS:-0}
+            CURRENT_REPLICATION=${CURRENT_REPLICATION:-0}
+
+            echo "Debug: Parsed CURRENT_PARTITIONS='$CURRENT_PARTITIONS', CURRENT_REPLICATION='$CURRENT_REPLICATION'"
+
+            ALTER_NEEDED=false
+
+            # Check if partitions need to be altered (only increase allowed)
+            if [ "$CURRENT_PARTITIONS" -gt 0 ] && [ "$DESIRED_PARTITIONS" -gt "$CURRENT_PARTITIONS" ]; then
+              echo "Topic {{ $topicName }} partitions need to be increased from $CURRENT_PARTITIONS to $DESIRED_PARTITIONS"
+              ALTER_NEEDED=true
+            fi
+
+            # Check replication factor mismatch (warn only, cannot alter with kafka-topics.sh)
+            if [ "$CURRENT_REPLICATION" -gt 0 ] && [ "$CURRENT_REPLICATION" != "$DESIRED_REPLICATION" ]; then
+              echo "Warning: Topic {{ $topicName }} has replication factor $CURRENT_REPLICATION, but desired is $DESIRED_REPLICATION."
+              echo "Replication factor changes require manual intervention using kafka-reassign-partitions tool."
+            fi
+
+            # Alter topic partitions if needed (replication factor cannot be altered with --alter)
+            if [ "$ALTER_NEEDED" = true ]; then
+              echo "Altering topic {{ $topicName }} partitions..."
+              /opt/kafka/bin/kafka-topics.sh \
+                --alter \
+                --bootstrap-server ${BOOTSTRAP_SERVER} \
+                --command-config /tmp/kafka-config/client.properties \
+                --topic {{ $topicName }} \
+                --partitions ${DESIRED_PARTITIONS}
+              echo "Topic {{ $topicName }} altered successfully"
+            elif [ "$CURRENT_PARTITIONS" -gt 0 ] && [ "$CURRENT_PARTITIONS" = "$DESIRED_PARTITIONS" ]; then
+              echo "Topic {{ $topicName }} already has correct partition count ($CURRENT_PARTITIONS)"
+            fi
+          else
+            echo "Warning: Could not describe topic {{ $topicName }}, skipping alteration check"
+          fi
+
+{{- end }}
+
+          echo "Topics created successfully. Listing all topics:"
+          /opt/kafka/bin/kafka-topics.sh \
+            --list \
+            --bootstrap-server ${BOOTSTRAP_SERVER} \
+            --command-config /tmp/kafka-config/client.properties
+      volumes:
+      - name: kafka-config
+        configMap:
+          name: {{ include "kafka.fullname" . }}-kafka-broker-config
+      - name: kafka-secret
+        secret:
+          secretName: {{ include "kafka.auth.secretName" . }}
+      - name: kafka-config-runtime
+        emptyDir: {}
+{{- end }}
+
