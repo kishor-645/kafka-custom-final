@@ -48,7 +48,7 @@ kafka:
       heapOpts: "-Xms512m -Xmx512m"
       performanceOpts: "-XX:+UseG1GC -XX:MaxGCPauseMillis=200"
   broker:
-    replicaCount: 2
+    replicaCount: 3
     logDir: /var/lib/kafka/data/kraft-broker-logs
     persistence:
       size: 1Gi
