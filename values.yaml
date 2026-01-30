@@ -18,8 +18,8 @@ kafka:
     replicaCount: 1
     logDir: /var/lib/kafka/data/kraft-controller-logs
     persistence:
-      size: 1Gi
-      storageClass: ""
+      size: 5Gi
+      storageClass: "longhorn"
     resources:
       requests:
         cpu: 100m
@@ -51,8 +51,8 @@ kafka:
     replicaCount: 2
     logDir: /var/lib/kafka/data/kraft-broker-logs
     persistence:
-      size: 1Gi
-      storageClass: ""
+      size: 10Gi
+      storageClass: "longhorn"
     resources:
       requests:
         cpu: 100m
