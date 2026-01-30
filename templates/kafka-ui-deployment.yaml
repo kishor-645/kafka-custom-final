@@ -1,0 +1,111 @@
+{{- if .Values.kafkaUI.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "kafka.fullname" . }}-ui
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kafka.labels" . | nindent 4 }}
+    app.kubernetes.io/component: kafka-ui
+spec:
+  replicas: {{ .Values.kafkaUI.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "kafka.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: kafka-ui
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        {{- include "kafka.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: kafka-ui
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/actuator/prometheus"
+    spec:
+      serviceAccountName: {{ include "kafka.fullname" . }}-ui
+      securityContext:
+        {{- toYaml .Values.kafkaUI.podSecurityContext | nindent 8 }}
+      
+      containers:
+        - name: kafka-ui
+          image: "{{ .Values.kafkaUI.image.registry }}/{{ .Values.kafkaUI.image.repository }}:{{ .Values.kafkaUI.image.tag }}"
+          imagePullPolicy: {{ .Values.kafkaUI.image.pullPolicy }}
+          
+          securityContext:
+            {{- toYaml .Values.kafkaUI.containerSecurityContext | nindent 12 }}
+          
+          ports:
+            - name: http
+              containerPort: {{ .Values.kafkaUI.service.targetPort }}
+              protocol: TCP
+          
+          # Load configuration from ConfigMap
+          envFrom:
+            - configMapRef:
+                name: {{ include "kafka.fullname" . }}-ui-config
+          {{- if or .Values.kafka.auth.password .Values.kafka.auth.existingSecret }}
+            - secretRef:
+                name: {{ include "kafka.fullname" . }}-ui-credentials
+          {{- end }}
+          
+          # Additional environment variables
+          env:
+            - name: JAVA_OPTS
+              value: {{ .Values.kafkaUI.jvm.heapOpts | quote }}
+          
+          {{- if .Values.kafkaUI.livenessProbe.enabled }}
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: {{ .Values.kafkaUI.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.kafkaUI.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.kafkaUI.livenessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.kafkaUI.livenessProbe.failureThreshold }}
+          {{- end }}
+          
+          {{- if .Values.kafkaUI.readinessProbe.enabled }}
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            initialDelaySeconds: {{ .Values.kafkaUI.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.kafkaUI.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.kafkaUI.readinessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.kafkaUI.readinessProbe.failureThreshold }}
+          {{- end }}
+          
+          resources:
+            {{- toYaml .Values.kafkaUI.resources | nindent 12 }}
+          
+          volumeMounts:
+            - name: temp
+              mountPath: /tmp
+      
+      volumes:
+        - name: temp
+          emptyDir: {}
+      
+      {{- with .Values.kafkaUI.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      
+      {{- with .Values.kafkaUI.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      
+      {{- with .Values.kafkaUI.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      
+      terminationGracePeriodSeconds: 30
+{{- end }}

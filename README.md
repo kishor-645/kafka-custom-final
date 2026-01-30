@@ -36,6 +36,12 @@ Key options are summarized below; see `values.yaml` for the complete list.
 | `exporters.kafka.enabled` | Deploy the Kafka metrics exporter | `true` |
 | `serviceMonitors.enabled` | Create a Prometheus ServiceMonitor | `false` |
 | `serviceMonitors.labels` | Extra labels applied to the ServiceMonitor when enabled | `{ release: kube-prometheus-stack }` |
+| `kafkaUI.enabled` | Deploy Kafka UI dashboard for cluster management | `false` |
+| `kafkaUI.replicaCount` | Kafka UI replica count | `1` |
+| `kafkaUI.service.type` | Kafka UI service type (LoadBalancer, NodePort, or ClusterIP) | `LoadBalancer` |
+| `kafkaUI.service.port` | Kafka UI service port | `8080` |
+| `kafkaUI.image.repository` | Kafka UI container image repository | `provectuslabs/kafka-ui` |
+| `kafkaUI.image.tag` | Kafka UI container image tag | `latest` |
 | `kafka.controller.podSecurityContext` / `kafka.broker.podSecurityContext` | Enforced pod-level security settings (restricted profile defaults) | see `values.yaml` |
 | `networkPolicy.enabled` | Restrict ingress/egress with generated NetworkPolicies | `true` |
 | `autoscaling.broker.*` / `exporters.kafka.autoscaling.*` | HorizontalPodAutoscaler settings for brokers and exporter | disabled |
@@ -141,9 +147,83 @@ kafka:
 - Before restore, scale the StatefulSets to zero, recover PVCs from snapshot, and ensure secrets/configmaps match the backed-up state.
 - For cross-cluster migrations, seed a new cluster with identical `clusterId` and credentials, then replicate topics via MirrorMaker2 or consumer-driven replay.
 
+## Kafka UI Integration
+
+### Enabling Kafka UI
+
+Kafka UI provides a web dashboard for cluster monitoring and management. To enable it, set `kafkaUI.enabled=true` in your values or during Helm deployment:
+
+```bash
+# Enable Kafka UI with default settings
+helm upgrade --install k1-kfk . \
+  --namespace k1 \
+  --set kafkaUI.enabled=true \
+  --set kafka.auth.password="your-password"
+```
+
+### SASL Authentication
+
+Kafka UI automatically inherits the SASL credentials from your Kafka cluster configuration. When `kafka.auth.sasl.securityProtocol` is set to `SASL_PLAINTEXT`, the UI is configured with:
+
+- **Security Protocol:** `SASL_PLAINTEXT`
+- **SASL Mechanism:** `PLAIN`
+- **Credentials:** Auto-populated from `kafka.auth.username` and `kafka.auth.password`
+
+### Accessing the Dashboard
+
+Once deployed, access Kafka UI via:
+
+```bash
+# Get the external IP (LoadBalancer) or NodePort
+kubectl get svc -n <namespace> | grep kafka-ui
+
+# For LoadBalancer
+http://<EXTERNAL-IP>:8080
+
+# For NodePort
+http://<NODE-IP>:<NODE-PORT>
+
+# For ClusterIP (port-forward)
+kubectl port-forward -n <namespace> svc/<release-name>-kafka-ui 8080:8080
+# Then visit http://localhost:8080
+```
+
+### Configuration
+
+Key Kafka UI settings in `values.yaml`:
+
+```yaml
+kafkaUI:
+  enabled: false
+  image:
+    registry: docker.io
+    repository: provectuslabs/kafka-ui  # Official Kafka UI image
+    tag: "latest"
+  service:
+    type: LoadBalancer                   # Change to NodePort or ClusterIP if needed
+    port: 8080
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+```
+
+### Features
+
+- **Topic Management:** Create, view, and delete topics
+- **Consumer Groups:** Monitor offsets, lag, and partition assignments
+- **Message Browsing:** View and search messages in topics
+- **Cluster Metrics:** JMX metrics and broker health
+- **Schema Registry:** Integration (if available)
+- **Kafka Connect:** Integration (if available)
+
 ## Troubleshooting
 
 - Pods stuck in `CrashLoopBackOff` due to filesystem permission errors typically indicate custom images incompatible with the restricted security context; override the `*.containerSecurityContext` values as needed.
+- If Kafka UI cannot connect to brokers, verify that `kafka.auth.sasl.securityProtocol` and credentials are correctly set, and that the UI pod can reach the broker service DNS name.
 - If clients cannot reach brokers after install, review the generated NetworkPolicies and extend `networkPolicy.broker.ingress` to include the producing namespaces.
 - Autoscaling template failures during `helm template` or `helm install` usually mean CPU/memory targets were omitted—set at least one threshold for each enabled autoscaler.
 - KEDA scaling requires the CRDs and operator to be present; verify `kubectl get scaledobjects` works cluster-wide before enabling `keda.broker`.

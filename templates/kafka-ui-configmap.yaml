@@ -1,0 +1,48 @@
+{{- if .Values.kafkaUI.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "kafka.fullname" . }}-ui-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kafka.labels" . | nindent 4 }}
+    app.kubernetes.io/component: kafka-ui
+data:
+  # Kafka UI cluster configuration
+  KAFKA_CLUSTERS_0_NAME: "{{ include "kafka.fullname" . }}-cluster"
+  KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: "{{ include "kafka.fullname" . }}-kafka-broker:9092"
+  KAFKA_CLUSTERS_0_METRICS_PORT: "9092"
+  
+  # Security settings for SASL_PLAINTEXT
+  KAFKA_CLUSTERS_0_PROPERTIES_SECURITY_PROTOCOL: "{{ .Values.kafka.auth.sasl.securityProtocol }}"
+  KAFKA_CLUSTERS_0_PROPERTIES_SASL_MECHANISM: "{{ .Values.kafka.auth.sasl.mechanism }}"
+  
+  # UI Settings
+  KAFKA_UI_BROKERS_CLUSTERIDENTIFIER: "{{ include "kafka.fullname" . }}-cluster"
+  
+  # Logging level
+  LOGGING_LEVEL_COM_PROVECTUS: "INFO"
+  LOGGING_LEVEL_ROOT: "WARN"
+  
+  # Server settings
+  SERVER_PORT: "8080"
+  SERVER_SERVLET_CONTEXT_PATH: "/"
+
+{{- if or .Values.kafka.auth.password .Values.kafka.auth.existingSecret }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "kafka.fullname" . }}-ui-credentials
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kafka.labels" . | nindent 4 }}
+    app.kubernetes.io/component: kafka-ui
+type: Opaque
+stringData:
+  KAFKA_CLUSTERS_0_PROPERTIES_SASL_JAAS_CONFIG: |
+    org.apache.kafka.common.security.plain.PlainLoginModule required \
+    username="{{ .Values.kafka.auth.username }}" \
+    password="{{ .Values.kafka.auth.password }}";
+{{- end }}
+{{- end }}

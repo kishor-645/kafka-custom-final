@@ -188,4 +188,57 @@ networkPolicy:
     ingress: []
     egress: []
 
+kafkaUI:
+  enabled: false
+  image:
+    registry: docker.io
+    repository: provectuslabs/kafka-ui
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  replicaCount: 1
+  service:
+    type: LoadBalancer
+    port: 8080
+    targetPort: 8080
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  podSecurityContext:
+    fsGroup: 1001
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+  containerSecurityContext:
+    runAsUser: 1001
+    runAsNonRoot: true
+    readOnlyRootFilesystem: false
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+  jvm:
+    heapOpts: "-Xms256M -Xmx512M"
+  nodeSelector: {}
+  affinity: {}
+  tolerations: []
+  podDisruptionBudget:
+    enabled: false
+    maxUnavailable: 0
+
 
