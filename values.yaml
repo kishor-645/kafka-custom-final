@@ -19,7 +19,7 @@ kafka:
     logDir: /var/lib/kafka/data/kraft-controller-logs
     persistence:
       size: 5Gi
-      storageClass: "longhorn"
+      storageClass: "longhorn-fast"
     resources:
       requests:
         cpu: 100m
@@ -52,7 +52,7 @@ kafka:
     logDir: /var/lib/kafka/data/kraft-broker-logs
     persistence:
       size: 10Gi
-      storageClass: "longhorn"
+      storageClass: "longhorn-fast"
     resources:
       requests:
         cpu: 100m
