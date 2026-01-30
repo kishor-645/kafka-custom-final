@@ -29,8 +29,8 @@ kubectl get ns "$NAMESPACE" >/dev/null 2>&1 || kubectl create ns "$NAMESPACE"
 helm upgrade --install "$RELEASE_NAME" "$CHART_PATH" \
   --namespace "$NAMESPACE" \
   --set kafka.controller.persistence.storageClass="$STORAGE_CLASS" \
-  --set kafka.controller.persistence.size="2Gi" \
+  --set kafka.controller.persistence.size="1Gi" \
   --set kafka.broker.persistence.storageClass="$STORAGE_CLASS" \
-  --set kafka.broker.persistence.size="5Gi" \
+  --set kafka.broker.persistence.size="1Gi" \
   --set kafka.broker.resources.requests.memory="1Gi" \
   --set kafka.broker.resources.limits.memory="2Gi"

@@ -18,7 +18,7 @@ kafka:
     replicaCount: 1
     logDir: /var/lib/kafka/data/kraft-controller-logs
     persistence:
-      size: 5Gi
+      size: 1Gi
       storageClass: "longhorn-fast"
     resources:
       requests:
@@ -51,7 +51,7 @@ kafka:
     replicaCount: 2
     logDir: /var/lib/kafka/data/kraft-broker-logs
     persistence:
-      size: 10Gi
+      size: 1Gi
       storageClass: "longhorn-fast"
     resources:
       requests:
