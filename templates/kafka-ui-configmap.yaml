@@ -41,8 +41,5 @@ metadata:
     app.kubernetes.io/component: kafka-ui
 type: Opaque
 stringData:
-  KAFKA_CLUSTERS_0_PROPERTIES_SASL_JAAS_CONFIG: |
-    org.apache.kafka.common.security.plain.PlainLoginModule required \
-    username="{{ include "kafka.auth.username" . }}" \
-    password="{{ include "kafka.auth.password" . }}";
+  KAFKA_CLUSTERS_0_PROPERTIES_SASL_JAAS_CONFIG: "org.apache.kafka.common.security.plain.PlainLoginModule required username=\"{{ include "kafka.auth.username" . }}\" password=\"{{ include "kafka.auth.password" . }}\";"
 {{- end }}
