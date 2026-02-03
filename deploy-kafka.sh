@@ -34,6 +34,5 @@ helm upgrade --install "$RELEASE_NAME" "$CHART_PATH" \
   --set kafka.broker.persistence.size="1Gi" \
   --set kafka.broker.resources.requests.memory="1Gi" \
   --set kafka.broker.resources.limits.memory="2Gi" \
-  --set kafka.auth.password="" \
-  --set kafka.auth.enabled=false \
+  --set kafka.auth.password="kafka-secure-password-123" \
   --set kafkaUI.enabled=true

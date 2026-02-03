@@ -28,7 +28,8 @@ data:
   SERVER_PORT: "8080"
   SERVER_SERVLET_CONTEXT_PATH: "/"
 
-{{- if or (include "kafka.auth.password" .) .Values.kafka.auth.existingSecret }}
+{{- end }}
+{{- if and .Values.kafkaUI.enabled (or (include "kafka.auth.password" .) .Values.kafka.auth.existingSecret) }}
 ---
 apiVersion: v1
 kind: Secret
@@ -44,5 +45,4 @@ stringData:
     org.apache.kafka.common.security.plain.PlainLoginModule required \
     username="{{ include "kafka.auth.username" . }}" \
     password="{{ include "kafka.auth.password" . }}";
-{{- end }}
 {{- end }}

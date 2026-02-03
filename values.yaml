@@ -82,7 +82,7 @@ kafka:
       performanceOpts: "-XX:+UseG1GC -XX:MaxGCPauseMillis=200"
   auth:
     username: user1
-    password: ""
+    password: "kafka-secure-password-123"
     existingSecret: ""
     existingSecretKeys:
       username: username
