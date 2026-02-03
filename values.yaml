@@ -214,7 +214,7 @@ kafkaUI:
       type: RuntimeDefault
   containerSecurityContext:
     runAsUser: 1001
-    runAsNonRoot: true
+    runAsNonRoot: false
     readOnlyRootFilesystem: false
     allowPrivilegeEscalation: false
     capabilities:

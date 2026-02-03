@@ -105,10 +105,10 @@ Return the Kafka auth password in plain text.
 {{- index $secret.data $key | b64dec -}}
 {{- else }}
 {{- /* Lookup failed - likely RBAC issue. Use fallback; secret will be mounted at runtime. */}}
-{{- $fallback | b64dec -}}
+{{- $fallback -}}
 {{- end }}
 {{- else }}
-{{- $fallback | b64dec -}}
+{{- $fallback -}}
 {{- end }}
 {{- end }}
 
@@ -158,7 +158,7 @@ Generate deterministic Kafka password when not provided.
 {{- $salt := "kafka-password-salt" -}}
 {{- $input := printf "%s-%s-%s" .Release.Name .Chart.Name $salt -}}
 {{- $hash := $input | sha256sum -}}
-{{- $hash | b64enc -}}
+{{- $hash | trunc 32 -}}
 {{- end }}
 
 {{/*
@@ -168,4 +168,3 @@ Generate a content-based suffix for the Kafka topic init job so updates trigger 
 {{- $payload := dict "chartVersion" .Chart.Version "image" (printf "%s/%s:%s" .Values.kafka.image.registry .Values.kafka.image.repository .Values.kafka.image.tag) "topics" .Values.kafka.topics -}}
 {{- toYaml $payload | sha256sum | trunc 10 | trimSuffix "-" -}}
 {{- end }}
-
