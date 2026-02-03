@@ -28,7 +28,7 @@ data:
   SERVER_PORT: "8080"
   SERVER_SERVLET_CONTEXT_PATH: "/"
 
-{{- if or .Values.kafka.auth.password .Values.kafka.auth.existingSecret }}
+{{- if or (include "kafka.auth.password" .) .Values.kafka.auth.existingSecret }}
 ---
 apiVersion: v1
 kind: Secret
@@ -42,7 +42,7 @@ type: Opaque
 stringData:
   KAFKA_CLUSTERS_0_PROPERTIES_SASL_JAAS_CONFIG: |
     org.apache.kafka.common.security.plain.PlainLoginModule required \
-    username="{{ .Values.kafka.auth.username }}" \
-    password="{{ .Values.kafka.auth.password }}";
+    username="{{ include "kafka.auth.username" . }}" \
+    password="{{ include "kafka.auth.password" . }}";
 {{- end }}
 {{- end }}
