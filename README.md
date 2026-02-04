@@ -24,6 +24,7 @@ Key options are summarized below; see `values.yaml` for the complete list.
 | `kafka.broker.replicaCount` | Kafka broker replicas | `2` |
 | `kafka.broker.persistence.storageClass` | StorageClass for broker PVCs (empty uses cluster default) | `""` |
 | `kafka.broker.persistence.size` | Requested storage capacity for each broker PVC | `1Gi` |
+| `kafka.auth.enabled` | Enable SASL/PLAIN authentication for brokers, topic-init, exporter, and Kafka UI | `true` |
 | `kafka.auth.username` | SASL/PLAIN username for broker and clients | `user1` |
 | `kafka.auth.password` | SASL/PLAIN password (auto-generated when empty) | `""` |
 | `kafka.auth.existingSecret` | Name of an existing secret providing SASL credentials (skips chart-managed secret; falls back to inline values when absent) | `""` |
@@ -107,6 +108,16 @@ kafka:
     existingSecretKeys:
       username: sasl-user
       password: sasl-pass
+```
+
+Deploy without SASL (PLAINTEXT listeners, no credentials required):
+
+```yaml
+# values-no-auth.yaml
+fullnameOverride: dev-kafka
+kafka:
+  auth:
+    enabled: false
 ```
 
 ### Security Hardening
@@ -233,4 +244,3 @@ kafkaUI:
 | Chart Version | Kafka Version | Kubernetes Versions | Notes |
 | --- | --- | --- | --- |
 | 0.1.2 | 4.1.0 | 1.27 – 1.30 | Validated with restricted PodSecurity admission, requires Helm 3.9+ for `fail` templating |
-

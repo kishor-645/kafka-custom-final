@@ -39,9 +39,11 @@ spec:
         volumeMounts:
         - name: kafka-config
           mountPath: /opt/kafka/config/kraft
+        {{- if .Values.kafka.auth.enabled }}
         - name: kafka-secret
           mountPath: /opt/kafka/secrets
           readOnly: true
+        {{- end }}
         - name: kafka-config-runtime
           mountPath: /tmp/kafka-config
         {{- $root := . }}
@@ -51,15 +53,18 @@ spec:
         - |
           set -e
           
+          {{- if .Values.kafka.auth.enabled }}
           # Read username and password from mounted secret
           SECRET_USERNAME_KEY="{{ include "kafka.auth.usernameKey" . | trim }}"
           SECRET_PASSWORD_KEY="{{ include "kafka.auth.passwordKey" . | trim }}"
           KAFKA_USERNAME=$$(cat /opt/kafka/secrets/$${SECRET_USERNAME_KEY})
           KAFKA_PASSWORD=$$(cat /opt/kafka/secrets/$${SECRET_PASSWORD_KEY})
+          {{- end }}
           
           # Create writable config directory and copy config files
           mkdir -p /tmp/kafka-config
           cp /opt/kafka/config/kraft/client.properties /tmp/kafka-config/
+          {{- if .Values.kafka.auth.enabled }}
           cp /opt/kafka/config/kraft/client_jaas.conf.template /tmp/kafka-config/
 
           # Generate JAAS config from template using actual credentials
@@ -67,6 +72,7 @@ spec:
 
           # Set JAAS configuration for Kafka client authentication
           export KAFKA_OPTS="-Djava.security.auth.login.config=/tmp/kafka-config/client_jaas.conf"
+          {{- end }}
 
           {{- if .Values.kafka.bootstrapServer }}
           BOOTSTRAP_SERVER="{{ .Values.kafka.bootstrapServer }}"
@@ -95,7 +101,9 @@ spec:
 
           # Kafka broker should be ready. Creating topics...
           echo "Creating topics..."
+          {{- if .Values.kafka.auth.enabled }}
           export KAFKA_OPTS="-Djava.security.auth.login.config=/tmp/kafka-config/client_jaas.conf"
+          {{- end }}
 
           # Ensure configured topics exist with correct configuration
 {{- range $topicName, $topic := $root.Values.kafka.topics }}
@@ -182,10 +190,11 @@ spec:
       - name: kafka-config
         configMap:
           name: {{ include "kafka.fullname" . }}-kafka-broker-config
+      {{- if .Values.kafka.auth.enabled }}
       - name: kafka-secret
         secret:
           secretName: {{ include "kafka.auth.secretName" . }}
+      {{- end }}
       - name: kafka-config-runtime
         emptyDir: {}
 {{- end }}
-

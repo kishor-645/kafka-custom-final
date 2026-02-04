@@ -81,6 +81,7 @@ kafka:
       heapOpts: "-Xms1g -Xmx1g"
       performanceOpts: "-XX:+UseG1GC -XX:MaxGCPauseMillis=200"
   auth:
+    enabled: true
     username: user1
     password: "kafka-secure-password-123"
     existingSecret: ""
@@ -200,6 +201,19 @@ kafkaUI:
     type: LoadBalancer
     port: 80
     targetPort: 8080
+  ingress:
+    enabled: false
+    ingressClassName: "nginx"
+    annotations: {}
+      # cert-manager.io/cluster-issuer: letsencrypt-prod
+    hosts:
+      - host: "kafka-ui.example.com"
+        path: "/"
+        pathType: "Prefix"
+    tls: []
+      # - secretName: kafka-ui-tls
+      #   hosts:
+      #     - kafka-ui.example.com
   resources:
     requests:
       cpu: 250m
@@ -240,5 +254,4 @@ kafkaUI:
   podDisruptionBudget:
     enabled: false
     maxUnavailable: 0
-
 

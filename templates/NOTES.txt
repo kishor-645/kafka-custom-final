@@ -18,8 +18,12 @@ Brokers
 
 Authentication
 --------------
+{{- if .Values.kafka.auth.enabled }}
 - SASL/PLAIN credentials stored in secret `{{ include "kafka.auth.secretName" . }}`
 - Client configuration mounted via configmap `{{ $fullname }}-kafka-broker-config`
+{{- else }}
+- SASL authentication disabled (`kafka.auth.enabled=false`). Brokers use PLAINTEXT.
+{{- end }}
 
 Topics
 ------
@@ -46,8 +50,11 @@ Exporter
 Next Steps
 ----------
 - Wait for `kubectl rollout status statefulset/{{ $fullname }}-kafka-broker` to report success.
+{{- if .Values.kafka.auth.enabled }}
 - Distribute the SASL credentials to clients and begin provisioning topics.
+{{- else }}
+- Clients can connect without SASL credentials using PLAINTEXT.
+{{- end }}
 {{- else }}
 Kafka workloads are disabled (`kafka.enabled=false`); no resources were rendered.
 {{- end }}
-

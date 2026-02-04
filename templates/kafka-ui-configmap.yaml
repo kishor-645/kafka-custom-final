@@ -13,9 +13,14 @@ data:
   KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: "{{ include "kafka.fullname" . }}-kafka-broker:9092"
   KAFKA_CLUSTERS_0_METRICS_PORT: "9092"
   
+  {{- if .Values.kafka.auth.enabled }}
   # Security settings for SASL_PLAINTEXT
   KAFKA_CLUSTERS_0_PROPERTIES_SECURITY_PROTOCOL: "{{ .Values.kafka.auth.sasl.securityProtocol }}"
   KAFKA_CLUSTERS_0_PROPERTIES_SASL_MECHANISM: "{{ .Values.kafka.auth.sasl.mechanism }}"
+  {{- else }}
+  # Security settings for PLAINTEXT
+  KAFKA_CLUSTERS_0_PROPERTIES_SECURITY_PROTOCOL: "PLAINTEXT"
+  {{- end }}
   
   # UI Settings
   KAFKA_UI_BROKERS_CLUSTERIDENTIFIER: "{{ include "kafka.fullname" . }}-cluster"
@@ -29,7 +34,7 @@ data:
   SERVER_SERVLET_CONTEXT_PATH: "/"
 
 {{- end }}
-{{- if and .Values.kafkaUI.enabled (or (include "kafka.auth.password" .) .Values.kafka.auth.existingSecret) }}
+{{- if and .Values.kafkaUI.enabled .Values.kafka.auth.enabled (or (include "kafka.auth.password" .) .Values.kafka.auth.existingSecret) }}
 ---
 apiVersion: v1
 kind: Secret
