@@ -81,7 +81,7 @@ kafka:
       heapOpts: "-Xms1g -Xmx1g"
       performanceOpts: "-XX:+UseG1GC -XX:MaxGCPauseMillis=200"
   auth:
-    enabled: true
+    enabled: false
     username: user1
     password: "kafka-secure-password-123"
     existingSecret: ""

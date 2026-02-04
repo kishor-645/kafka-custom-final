@@ -8,7 +8,7 @@ RELEASE_NAME="${ENV_PREFIX}-kfk"
 CHART_PATH="." # Path to your local folder
 
 # Updated HA Strategy for this specific chart
-STORAGE_CLASS="longhorn-fast"
+STORAGE_CLASS="longhorn"
 
 # === 1. Safety Check ===
 if [ ! -f "$CHART_PATH/Chart.yaml" ]; then
@@ -34,5 +34,4 @@ helm upgrade --install "$RELEASE_NAME" "$CHART_PATH" \
   --set kafka.broker.persistence.size="1Gi" \
   --set kafka.broker.resources.requests.memory="1Gi" \
   --set kafka.broker.resources.limits.memory="2Gi" \
-  --set kafka.auth.password="kafka-secure-password-123" \
   --set kafkaUI.enabled=true
