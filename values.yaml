@@ -80,6 +80,9 @@ kafka:
     jvm:
       heapOpts: "-Xms1g -Xmx1g"
       performanceOpts: "-XX:+UseG1GC -XX:MaxGCPauseMillis=200"
+    service:
+      loadBalancerIP: ""
+      annotations: {}
   auth:
     enabled: false
     username: user1
@@ -254,4 +257,3 @@ kafkaUI:
   podDisruptionBudget:
     enabled: false
     maxUnavailable: 0
-
