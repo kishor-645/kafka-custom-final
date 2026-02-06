@@ -4,7 +4,7 @@
 ENV_PREFIX=${1:-"k"}
 NAMESPACE="${ENV_PREFIX}"
 # Make sure the Release Name is short to avoid label truncation issues
-RELEASE_NAME="${ENV_PREFIX}-stackforge-kfk"
+RELEASE_NAME="${ENV_PREFIX}-kfk"
 CHART_PATH="." # Path to your local folder
 
 # Updated HA Strategy for this specific chart
