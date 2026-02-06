@@ -80,6 +80,14 @@ kafka:
     jvm:
       heapOpts: "-Xms1g -Xmx1g"
       performanceOpts: "-XX:+UseG1GC -XX:MaxGCPauseMillis=200"
+    listeners:
+      internalName: INTERNAL
+      externalName: EXTERNAL
+      internalPort: 9092
+      externalPort: 9094
+    # External address advertised for EXTERNAL listener.
+    # If empty, will fall back to broker.service.loadBalancerIP.
+    externalAdvertisedHost: ""
     # Optional override for advertised.listeners.
     # Example: PLAINTEXT://192.168.10.123:9092
     advertisedListeners: ""

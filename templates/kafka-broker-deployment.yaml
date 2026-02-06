@@ -147,7 +147,10 @@ spec:
               exec /opt/kafka/bin/kafka-server-start.sh /tmp/kafka-config/server.properties
           ports:
             - name: broker
-              containerPort: 9092
+              containerPort: {{ .Values.kafka.broker.listeners.internalPort }}
+              protocol: TCP
+            - name: external
+              containerPort: {{ .Values.kafka.broker.listeners.externalPort }}
               protocol: TCP
           readinessProbe:
             tcpSocket:
@@ -179,7 +182,7 @@ spec:
             - name: KAFKA_NODE_ID
               value: ""  # Will be set by startup script
             - name: KAFKA_ADVERTISED_LISTENERS
-              value: "{{- if .Values.kafka.broker.advertisedListeners -}}{{ .Values.kafka.broker.advertisedListeners }}{{- else -}}{{ if .Values.kafka.auth.enabled }}SASL_PLAINTEXT{{ else }}PLAINTEXT{{ end }}://$(POD_NAME).{{ include "kafka.fullname" . }}-kafka-broker.{{ default "default" .Release.Namespace }}.svc.cluster.local:9092{{- end }}"
+              value: "{{- if .Values.kafka.broker.advertisedListeners -}}{{ .Values.kafka.broker.advertisedListeners }}{{- else -}}{{ .Values.kafka.broker.listeners.internalName }}://$(POD_NAME).{{ include "kafka.fullname" . }}-kafka-broker.{{ default "default" .Release.Namespace }}.svc.cluster.local:{{ .Values.kafka.broker.listeners.internalPort }},{{ .Values.kafka.broker.listeners.externalName }}://{{ .Values.kafka.broker.externalAdvertisedHost | default .Values.kafka.broker.service.loadBalancerIP }}:{{ .Values.kafka.broker.listeners.externalPort }}{{- end }}"
             - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
               value: "1"
             - name: KAFKA_TRANSACTION_STATE_LOG_MIN_ISR
