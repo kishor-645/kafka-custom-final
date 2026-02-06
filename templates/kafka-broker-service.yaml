@@ -15,7 +15,7 @@ spec:
   type: ClusterIP
   clusterIP: None
   ports:
-    - port: {{ .Values.kafka.broker.listeners.internalPort }}
+    - port: 9092
       targetPort: broker
       protocol: TCP
       name: broker
@@ -44,10 +44,10 @@ spec:
   type: LoadBalancer
   loadBalancerIP: {{ $lbIP | quote }}
   ports:
-    - port: {{ .Values.kafka.broker.listeners.externalPort }}
-      targetPort: external
+    - port: 9092
+      targetPort: broker
       protocol: TCP
-      name: external
+      name: broker
   selector:
     app.kubernetes.io/name: {{ include "kafka.name" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
