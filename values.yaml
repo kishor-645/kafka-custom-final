@@ -80,6 +80,9 @@ kafka:
     jvm:
       heapOpts: "-Xms1g -Xmx1g"
       performanceOpts: "-XX:+UseG1GC -XX:MaxGCPauseMillis=200"
+    # Optional override for advertised.listeners.
+    # Example: PLAINTEXT://192.168.10.123:9092
+    advertisedListeners: ""
     service:
       loadBalancerIP: ""
       annotations: {}

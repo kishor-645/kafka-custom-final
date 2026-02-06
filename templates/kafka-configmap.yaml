@@ -71,7 +71,7 @@ data:
     listeners={{ if .Values.kafka.auth.enabled }}SASL_PLAINTEXT{{ else }}PLAINTEXT{{ end }}://:9092
     listener.security.protocol.map={{ if .Values.kafka.auth.enabled }}SASL_PLAINTEXT:SASL_PLAINTEXT{{ else }}PLAINTEXT:PLAINTEXT{{ end }},CONTROLLER:PLAINTEXT
     controller.listener.names=CONTROLLER
-    advertised.listeners={{ if .Values.kafka.auth.enabled }}SASL_PLAINTEXT{{ else }}PLAINTEXT{{ end }}://PLACEHOLDER_POD_NAME.{{ include "kafka.fullname" . }}-kafka-broker.{{ default "default" .Release.Namespace }}.svc.cluster.local:9092
+    advertised.listeners={{- if .Values.kafka.broker.advertisedListeners -}}{{ .Values.kafka.broker.advertisedListeners }}{{- else -}}{{ if .Values.kafka.auth.enabled }}SASL_PLAINTEXT{{ else }}PLAINTEXT{{ end }}://PLACEHOLDER_POD_NAME.{{ include "kafka.fullname" . }}-kafka-broker.{{ default "default" .Release.Namespace }}.svc.cluster.local:9092{{- end }}
     inter.broker.listener.name={{ if .Values.kafka.auth.enabled }}SASL_PLAINTEXT{{ else }}PLAINTEXT{{ end }}
     num.partitions=3
     default.replication.factor=1

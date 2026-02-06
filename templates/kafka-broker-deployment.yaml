@@ -179,7 +179,7 @@ spec:
             - name: KAFKA_NODE_ID
               value: ""  # Will be set by startup script
             - name: KAFKA_ADVERTISED_LISTENERS
-              value: "{{ if .Values.kafka.auth.enabled }}SASL_PLAINTEXT{{ else }}PLAINTEXT{{ end }}://$(POD_NAME).{{ include "kafka.fullname" . }}-kafka-broker.{{ default "default" .Release.Namespace }}.svc.cluster.local:9092"
+              value: "{{- if .Values.kafka.broker.advertisedListeners -}}{{ .Values.kafka.broker.advertisedListeners }}{{- else -}}{{ if .Values.kafka.auth.enabled }}SASL_PLAINTEXT{{ else }}PLAINTEXT{{ end }}://$(POD_NAME).{{ include "kafka.fullname" . }}-kafka-broker.{{ default "default" .Release.Namespace }}.svc.cluster.local:9092{{- end }}"
             - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
               value: "1"
             - name: KAFKA_TRANSACTION_STATE_LOG_MIN_ISR

@@ -35,4 +35,5 @@ helm upgrade --install "$RELEASE_NAME" "$CHART_PATH" \
   --set kafka.broker.resources.requests.memory="1Gi" \
   --set kafka.broker.resources.limits.memory="2Gi" \
   --set kafka.broker.service.loadBalancerIP="192.168.10.123" \
+  --set kafka.broker.advertisedListeners="PLAINTEXT://192.168.10.123:9092" \
   --set kafkaUI.enabled=true
