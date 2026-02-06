@@ -4,7 +4,7 @@
 ENV_PREFIX=${1:-"k"}
 NAMESPACE="${ENV_PREFIX}"
 # Make sure the Release Name is short to avoid label truncation issues
-RELEASE_NAME="${ENV_PREFIX}-kfk"
+RELEASE_NAME="${ENV_PREFIX}-stackforge-kfk"
 CHART_PATH="." # Path to your local folder
 
 # Updated HA Strategy for this specific chart
@@ -12,15 +12,13 @@ STORAGE_CLASS="longhorn"
 
 # === 1. Safety Check ===
 if [ ! -f "$CHART_PATH/Chart.yaml" ]; then
-    echo "❌ Error: Could not find Chart.yaml in '$CHART_PATH'. Are you in the right folder?"
+    echo " Error: Could not find Chart.yaml in '$CHART_PATH'. Are you in the right folder?"
     exit 1
 fi
 
 echo "------------------------------------------------------------------"
-echo "🚀 Deploying Vanilla Kafka (Data HA Mode)"
-echo "📍 Namespace:  $NAMESPACE"
-echo "🏗️  Setup:      1 Controller (Metadata) / 3 Brokers (Data)"
-echo "------------------------------------------------------------------"
+echo "Deploying Vanilla Kafka (Data HA Mode)"
+echo "Namespace:  $NAMESPACE"
 
 # === 2. Namespace Preparation ===
 kubectl get ns "$NAMESPACE" >/dev/null 2>&1 || kubectl create ns "$NAMESPACE"
