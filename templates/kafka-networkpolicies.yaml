@@ -96,6 +96,11 @@ spec:
       ports:
         - protocol: TCP
           port: 9092
+    {{- if .Values.kafka.broker.listeners.externalPort }}
+    - ports:
+        - protocol: TCP
+          port: {{ .Values.kafka.broker.listeners.externalPort }}
+    {{- end }}
     {{- end }}
   egress:
     {{- if .Values.networkPolicy.broker.egress }}
@@ -199,4 +204,3 @@ spec:
     {{- end }}
 {{- end }}
 {{- end }}
-
